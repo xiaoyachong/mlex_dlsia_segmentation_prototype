@@ -19,14 +19,24 @@ readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.11, <=3.12"
 
 dependencies = [
-  "numpy==1.26.4",
+  "torch==2.9.1",
+  "torchvision==0.24.1",
+  "lightly-train==0.13.2",
+  "pytorch-lightning==2.6.0",
+  "numpy==2.2.6",
+  "Pillow",
+  "mlflow==2.22.0",
+  "tiled[client]==0.2.0",
+  "entrypoints",
+  "stamina",
+  "dask",
   "qlty==0.2.0",
   "dvclive==3.44.0",
   "dlsia==0.3.4",
   "pydantic>=1.10.15",
-  "tiled[client]==0.2.0",
-  "mlflow==2.22.0",
-  "torch==2.2.2"
+  "pyyaml",
+  "python-dotenv",
+  "mlex_utils[all] @ git+https://github.com/mlexchange/mlex_utils.git",
 ]
 
 [project.optional-dependencies]

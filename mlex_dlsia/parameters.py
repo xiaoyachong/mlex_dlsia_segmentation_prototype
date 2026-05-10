@@ -156,3 +156,43 @@ class SMSNetEnsembleParameters(TrainingParameters):
     max_trial: Optional[int] = Field(
         default=10, description="max trial for the ensemble"
     )
+
+
+# ===========================================Lightly Parameters===========================================#
+class LightlyParameters(BaseModel):
+    network: str = Field(description="type of lightly_train network used")
+    num_classes: int = Field(description="number of classes as output channel")
+    steps: int = Field(default=100, description="number of finetuning steps")
+    batch_size_train: Optional[int] = Field(
+        default=1, description="batch size of train set"
+    )
+    batch_size_val: Optional[int] = Field(
+        default=1, description="batch size of validation set"
+    )
+    batch_size_inference: Optional[int] = Field(
+        default=1, description="batch size for inference"
+    )
+    # Fixed training settings not exposed in UI
+    num_nodes: int = Field(default=1)
+    devices: str = Field(default="auto")
+    out_dir: str = Field(default="/lightly_out_finetuned")
+    overwrite: bool = Field(default=True)
+    resume_interrupted: bool = Field(default=False)
+    save_last: bool = Field(default=True)
+    save_best: bool = Field(default=True)
+
+    @property
+    def log_every_num_steps(self) -> int:
+        return max(1, self.steps // 10)
+
+    @property
+    def val_every_num_steps(self) -> int:
+        return max(1, self.steps // 20)
+
+    @property
+    def val_log_every_num_steps(self) -> int:
+        return max(1, self.steps // 10)
+
+    @property
+    def save_every_num_steps(self) -> int:
+        return max(1, self.steps // 10)

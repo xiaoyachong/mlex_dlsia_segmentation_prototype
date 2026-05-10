@@ -1,6 +1,6 @@
 import logging
 
-from mlex_dlsia.parameters import IOParameters, TrainingParameters
+from mlex_dlsia.parameters import IOParameters, LightlyParameters, TrainingParameters
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -27,6 +27,9 @@ def validate_parameters(parameters, is_training=False):
 
     # Detect which model we have, then load corresponding parameters
     model_parameters = parameters["model_parameters"]
-    model_parameters = TrainingParameters(**model_parameters)
+    if model_parameters.get("network", "").startswith("lightly_train"):
+        model_parameters = LightlyParameters(**model_parameters)
+    else:
+        model_parameters = TrainingParameters(**model_parameters)
     logging.info("Parameters loaded successfully.")
     return io_parameters, model_parameters

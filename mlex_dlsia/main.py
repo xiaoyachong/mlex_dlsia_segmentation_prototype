@@ -10,7 +10,7 @@ from dlsia.core.helpers import get_device
 from mlex_dlsia.dataset import initialize_tiled_datasets
 from mlex_dlsia.inference import run_inference
 from mlex_dlsia.network import build_network, load_network
-from mlex_dlsia.train import run_train
+from mlex_dlsia.train import run_lightly_train, run_train
 from mlex_dlsia.utils.dataloaders import construct_train_dataloaders
 from mlex_dlsia.utils.params_validation import validate_parameters
 from mlex_dlsia.utils.tiled import prepare_tiled_containers
@@ -49,39 +49,43 @@ if __name__ == "__main__":
     logging.info(f"Using temporary directory: {model_dir}")
 
     if args.train:
-        dataset = initialize_tiled_datasets(
-            io_parameters, model_parameters, is_training=args.train
-        )
-        logging.info("Tiled datasets initialized successfully.")
+        if model_parameters.network.startswith("lightly_train"):
+            run_lightly_train(io_parameters, model_parameters, model_dir)
+            logging.info("Training completed successfully.")
+        else:
+            dataset = initialize_tiled_datasets(
+                io_parameters, model_parameters, is_training=args.train
+            )
+            logging.info("Tiled datasets initialized successfully.")
 
-        # Build network
-        # TODO: Assumes that the last channel is the number of channels in the image with a max of 4 channels
-        qlty_window = model_parameters.qlty_window
-        last_channel = dataset.data_client.shape[-1]
-        networks = build_network(
-            network_name=model_parameters.network,
-            in_channels=last_channel if last_channel <= 4 else 1,
-            image_shape=(qlty_window, qlty_window),
-            num_classes=model_parameters.num_classes,
-            parameters=parameters[
-                "model_parameters"
-            ],  # Pass the raw parameters dictionary for network construction
-        )
+            # Build network
+            # TODO: Assumes that the last channel is the number of channels in the image with a max of 4 channels
+            qlty_window = model_parameters.qlty_window
+            last_channel = dataset.data_client.shape[-1]
+            networks = build_network(
+                network_name=model_parameters.network,
+                in_channels=last_channel if last_channel <= 4 else 1,
+                image_shape=(qlty_window, qlty_window),
+                num_classes=model_parameters.num_classes,
+                parameters=parameters[
+                    "model_parameters"
+                ],  # Pass the raw parameters dictionary for network construction
+            )
 
-        train_loader, val_loader = construct_train_dataloaders(
-            dataset, model_parameters
-        )
+            train_loader, val_loader = construct_train_dataloaders(
+                dataset, model_parameters
+            )
 
-        net = run_train(
-            train_loader,
-            val_loader,
-            io_parameters,
-            networks,
-            model_parameters,
-            device,
-            model_dir,
-        )
-        logging.info("Training completed successfully.")
+            net = run_train(
+                train_loader,
+                val_loader,
+                io_parameters,
+                networks,
+                model_parameters,
+                device,
+                model_dir,
+            )
+            logging.info("Training completed successfully.")
     else:
         # Load model for inference
         if hasattr(io_parameters, "mlflow_model") and io_parameters.mlflow_model:
@@ -93,9 +97,6 @@ if __name__ == "__main__":
                 "Either mlflow_model or uid_retrieve must be provided for inference mode"
             )
 
-        net = load_network(model_name, network_type=model_parameters.network)
-        logging.info("Model loaded successfully for inference.")
-
         # Prepare dataset for inference
         dataset = initialize_tiled_datasets(
             io_parameters, model_parameters, is_training=False
@@ -105,11 +106,20 @@ if __name__ == "__main__":
             io_parameters, dataset, model_parameters.network
         )
 
-        run_inference(
-            dataset,
-            net,
-            seg_client,
-            model_parameters,
-            device,
-        )
+        if model_parameters.network.startswith("lightly_train"):
+            from mlex_dlsia.inference import run_lightly_inference
+
+            model = mlflow.pyfunc.load_model(f"models:/{model_name}/latest")
+            logging.info("Model loaded successfully for inference.")
+            run_lightly_inference(dataset, model, seg_client, model_parameters)
+        else:
+            net = load_network(model_name, network_type=model_parameters.network)
+            logging.info("Model loaded successfully for inference.")
+            run_inference(
+                dataset,
+                net,
+                seg_client,
+                model_parameters,
+                device,
+            )
         logging.info("Inference completed successfully.")
